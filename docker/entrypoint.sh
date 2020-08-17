@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -x
 MR_PATH="/var/www/html/mr_project"
