@@ -54,6 +54,50 @@ def check_for_emotion(driver_arg, emotion_name):
             return True
 
 
+def fetch_epochs_of_user_emotion_pair(driver_arg, user_name, emotion_name):
+
+    with driver_arg.session() as session:
+        result = session.run('''MATCH (u)-[ts]->(em) WHERE u.name = $user_name AND em.name = $emotion_name RETURN 
+                             ts.epoch AS timestamps''', user_name=user_name, emotion_name=emotion_name)
+
+        timestamp_list = []
+        for record in result:
+            timestamp_list.append(record["timestamps"])
+
+    one_emotion_dict = {
+        "emotion": emotion_name,
+        "timestampList": timestamp_list
+    }
+    return one_emotion_dict
+
+
+def fetch_all_emotions_of_one_user(driver_arg, user_name):
+    with driver_arg.session() as session:
+        result = session.run('''MATCH (u)-->(em) WHERE u.name = $user_name  RETURN 
+                             em.name AS emotions''', user_name=user_name)
+        emotion_list = []
+        for record in result:
+            if not record["emotions"] in emotion_list:
+                emotion_list.append(record["emotions"])
+    return emotion_list
+
+
+def get_all_user_emotions(driver_arg, user_name):
+
+    emotions_of_user = fetch_all_emotions_of_one_user(driver_arg, user_name)
+    list_of_individual_emotion_dicts = []
+
+    for i in range(len(emotions_of_user)):
+        list_of_individual_emotion_dicts.append(fetch_epochs_of_user_emotion_pair(driver_arg, user_name, emotions_of_user[i]))
+
+    dict_of_all_emotions_and_epochs = {
+        "user": user_name,
+        "emotionList": list_of_individual_emotion_dicts
+    }
+
+    return dict_of_all_emotions_and_epochs
+
+
 #FUNCTIONS THAT ACTUALLY CONNECT WITH THE DATABASE TO PERFORM TRANSACTIONS
 def spawn_emotion_node(driver_arg, emotion):
     with driver_arg.session() as session:
@@ -84,6 +128,36 @@ def add_users(driver_arg, users_list):
     n_users = len(users_list)
     for i in range(n_users):
         spawn_user_node(driver_arg, users_list[i])
+
+
+@csrf_exempt
+def get_user_emotion(request):
+    if request.method == 'GET':
+        query_arguments = request.GET
+        user = ''
+        emotion = ''
+
+        try:
+            user = query_arguments['user']
+            emotion = query_arguments['emotion']
+        except KeyError:
+            return HttpResponseBadRequest('Missing required key')
+
+        if check_for_user(DRIVER, user) and check_for_emotion(DRIVER, emotion):
+            epoch_dict = fetch_epochs_of_user_emotion_pair(DRIVER, user, emotion)
+            epoch_list = epoch_dict["timestampList"]
+            epoch_string = ''
+            for i in range(len(epoch_list)):
+                epoch_string = epoch_string + epoch_list[i] + '<br>'
+            return HttpResponse('''Good job! The user and emotion both exist, here are all their epochs! <br>
+            username: {}<br>
+            emotion: {}<br>
+            epochs: <br>{}
+            '''.format(user, emotion, epoch_string))
+
+        return HttpResponseBadRequest('Slow down dawg! The user and/or emotion do not exist, ya need a spelling lesson?')
+
+    return HttpResponseNotFound()
 
 
 @csrf_exempt
