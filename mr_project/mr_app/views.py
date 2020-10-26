@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 # Create your views here.
 from time import time
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, JsonResponse
 import neo4j
 from django.views.decorators.csrf import csrf_exempt
 from requests import codes
@@ -82,7 +82,7 @@ def fetch_all_emotions_of_one_user(driver_arg, user_name):
     return emotion_list
 
 
-def get_all_user_emotions(driver_arg, user_name):
+def fetch_all_emotions_and_epochs_of_user(driver_arg, user_name):
 
     emotions_of_user = fetch_all_emotions_of_one_user(driver_arg, user_name)
     list_of_individual_emotion_dicts = []
@@ -145,17 +145,29 @@ def get_user_emotion(request):
 
         if check_for_user(DRIVER, user) and check_for_emotion(DRIVER, emotion):
             epoch_dict = fetch_epochs_of_user_emotion_pair(DRIVER, user, emotion)
-            epoch_list = epoch_dict["timestampList"]
-            epoch_string = ''
-            for i in range(len(epoch_list)):
-                epoch_string = epoch_string + epoch_list[i] + '<br>'
-            return HttpResponse('''Good job! The user and emotion both exist, here are all their epochs! <br>
-            username: {}<br>
-            emotion: {}<br>
-            epochs: <br>{}
-            '''.format(user, emotion, epoch_string))
 
+            return JsonResponse(epoch_dict)
         return HttpResponseBadRequest('Slow down dawg! The user and/or emotion do not exist, ya need a spelling lesson?')
+
+    return HttpResponseNotFound()
+
+
+@csrf_exempt
+def get_all_user_emotions(request):
+    if request.method == 'GET':
+        query_arguments = request.GET
+        user = ''
+
+        try:
+            user = query_arguments['user']
+        except KeyError:
+            return HttpResponseBadRequest('Missing required key')
+
+        if check_for_user(DRIVER, user):
+            all_epochs_dict = fetch_all_emotions_and_epochs_of_user(DRIVER, user)
+
+            return JsonResponse(all_epochs_dict)
+        return HttpResponseBadRequest('Slow down dawg! The user does not exist, ya need a spelling lesson?')
 
     return HttpResponseNotFound()
 
