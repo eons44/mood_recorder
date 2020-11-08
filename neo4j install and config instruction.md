@@ -10,7 +10,7 @@
 ### Prepare packages to be installed
 `sudo apt update`
 
-###Install a Java disribution, we use OpenJDK 8. Enter y to confirm.
+###Install a Java disribution, we use OpenJDK 11. Enter y to confirm.
 `sudo apt install open-11-jdk`
 ###Verify install.
 `java -version`
@@ -56,8 +56,3 @@ dbms.security.auth_enabled=false
 ###with
 
 `stop`
-
-
-
-
-
