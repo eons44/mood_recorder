@@ -65,10 +65,14 @@ ln -s /usr/bin/python3.8 /usr/bin/python3
 If python3-venv is not installed, install it through apt:
 `apt install python3-venv`
 
+If python3-pip is not installed, install it through apt:
+`apt install python3-pip`
+
 ```
 python3 -m venv .
 source ./bin/activate
 pip3 install -r requirements.txt
+chmod +x ./mr_project/manage.py
 ```
 
 ## Run Django
